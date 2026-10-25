@@ -15,7 +15,6 @@ An end-to-end deep learning project that leverages **Graph Convolutional Network
 - ⚡ **ONNX Export:** Exports the trained model for portable inference.
 - 🚀 **ONNX Runtime:** Supports efficient model inference.
 - 🌐 **FastAPI Backend:** Provides an API for model predictions.
-- 🎨 **Streamlit Interface:** Offers an interactive application experience.
 
 ## 🛠️ Tech Stack
 
