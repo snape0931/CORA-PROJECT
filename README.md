@@ -5,7 +5,46 @@ An end-to-end deep learning project that leverages **Graph Convolutional Network
 ## 🚀 Deployment Note
 
 ⚠️ The application was deployed on Render. However, performance was severely affected by the bandwidth and resource limitations of Render's free tier.
-- 💻 **GitHub Repository:** [CORA-PROJECT](https://github.com/snape0931/CORA-PROJECT)
+💻 Run Locally
+
+Follow these steps to run CORA-PROJECT on your local machine.
+
+1. Clone the Repository
+
+git clone https://github.com/snape0931/CORA-PROJECT.git
+cd CORA-PROJECT
+
+2. Set Up the Environment
+
+python -m venv venv
+
+Windows
+
+venv\Scripts\activate
+
+macOS/Linux
+
+source venv/bin/activate
+
+3. Install Dependencies
+
+pip install -r requirements.txt
+
+4. Start the Application
+
+python -m uvicorn main:app --reload
+
+5. Access the Application
+
+* Web Interface: http://127.0.0.1:8000
+* API Documentation: http://127.0.0.1:8000/docs
+
+Notes
+
+* Keep the terminal running while using the application.
+* Ensure the ONNX model files are present in the repository root.
+* The application runs locally and does not require a public deployment.
+-  **GitHub Repository:** [CORA-PROJECT](https://github.com/snape0931/CORA-PROJECT)
 
 ## ✨ Features
 
