@@ -1,60 +1,45 @@
-🧠 Research Topic Classification using GCN
+# 🧠 Research Topic Classification using GCN
 
-An end-to-end deep learning project that leverages Graph Convolutional Networks (GCNs) to classify research papers into different topics using the Cora citation network. This project combines graph-based learning, PyTorch, ONNX model export, and efficient inference.
+An end-to-end deep learning project that leverages **Graph Convolutional Networks (GCNs)** to classify research papers into different topics using the **Cora citation network**. The project integrates graph-based learning, PyTorch, ONNX model export, and efficient inference through ONNX Runtime and FastAPI.
 
-🚀 Deployment Note
+🔗 **GitHub Repository:** [CORA-PROJECT](https://github.com/snape0931/CORA-PROJECT)
 
-⚠️ The application was deployed on Render. However, performance was severely affected by the bandwidth and resource limitations of Render’s free tier.
+## ✨ Features
 
-You can run the project locally by following the setup instructions below.
+- 🕸️ **Graph-Based Learning:** Learns from research paper features and citation relationships.
+- 🧠 **GCN Model:** Implements Graph Convolutional Networks using PyTorch.
+- 📚 **Cora Dataset:** Classifies research papers into seven topic categories.
+- ⚡ **ONNX Export:** Converts the trained model into a portable ONNX format.
+- 🚀 **ONNX Runtime:** Supports efficient model inference.
+- 🌐 **FastAPI Backend:** Provides an API for generating predictions.
+- 💻 **Web Interface:** Offers an interface to interact with the model.
+- 🔬 **Jupyter Notebook:** Supports model development and experimentation.
 
-* GitHub Repository: CORA-PROJECT
+## 🛠️ Tech Stack
 
-✨ Features
+| Technology | Purpose |
+|---|---|
+| Python | Core programming language |
+| PyTorch | GCN model development and training |
+| Cora Dataset | Citation network for classification |
+| ONNX | Model export and interoperability |
+| ONNX Runtime | Model inference |
+| FastAPI | Backend API |
+| Jupyter Notebook | Model development and experimentation |
+| HTML, CSS, JavaScript | Web interface |
 
-* 🕸️ Graph-Based Learning: Learns from paper features and citation relationships.
-* 🧠 GCN Model: Implements Graph Convolutional Networks using PyTorch.
-* 📚 Cora Dataset: Classifies research papers into seven topic categories.
-* ⚡ ONNX Export: Exports the trained model for portable inference.
-* 🚀 ONNX Runtime: Supports efficient model inference.
-* 🌐 FastAPI Backend: Provides an API for model predictions.
-* 💻 Local Execution: Run the application and test API endpoints on your own machine.
+## 📊 Dataset
 
-🛠️ Tech Stack
+The project uses the **Cora citation network**, a benchmark dataset for graph-based machine learning.
 
-Technology	Purpose
-Python	Core programming language
-PyTorch	GCN model development
-Cora Dataset	Citation network for classification
-ONNX	Model export and interoperability
-ONNX Runtime	Model inference
-FastAPI	Backend API
-Jupyter Notebook	Model development and experimentation
+- 🔵 **Nodes:** Research papers
+- 🔗 **Edges:** Citation relationships between papers
+- 🧩 **Node Features:** Numerical representations of research papers
+- 🎯 **Objective:** Predict the research topic of a paper using its features and citation network.
 
-📂 Project Structure
+## 🏷️ Classification Categories
 
-CORA-PROJECT/
-├── static/                     # Frontend assets
-├── anaconda_projects/db/       # Project data directory
-├── .ipynb_checkpoints/         # Jupyter checkpoints
-├── gcn_1.ipynb                 # Model development notebook
-├── main.py                     # FastAPI application
-├── cora_data.npz               # Dataset file
-├── simple_gcn_cora.onnx        # Exported GCN model
-├── simple_gcn_cora.onnx.data   # ONNX model data
-├── requirements.txt            # Python dependencies
-└── README.md
-
-📊 Dataset
-
-The project uses the Cora citation network, a benchmark dataset for graph-based machine learning.
-
-* 🔵 Nodes: Research papers
-* 🔗 Edges: Citation relationships between papers
-* 🧩 Node Features: Numerical representations of papers
-* 🎯 Objective: Predict the research topic of a paper
-
-🏷️ Classification Categories
+The model classifies research papers into seven categories:
 
 1. 📖 Case-Based
 2. 🧬 Genetic Algorithms
@@ -64,73 +49,118 @@ The project uses the Cora citation network, a benchmark dataset for graph-based 
 6. 🌳 Rule Learning
 7. 📐 Theory
 
-🔄 Project Workflow
+## 🔄 Project Workflow
 
 1. 📥 Load and preprocess the Cora citation dataset.
-2. 🕸️ Represent research papers and citations as a graph.
-3. 🧠 Train the GCN model using PyTorch.
+2. 🕸️ Represent research papers and their citation relationships as a graph.
+3. 🧠 Train the Graph Convolutional Network using PyTorch.
 4. 📦 Export the trained model to ONNX format.
 5. ⚡ Load the exported model using ONNX Runtime.
 6. 🎯 Generate research topic predictions.
-7. 🌐 Integrate model inference with the application interface.
-8. ☁️ Deploy the backend and web application.
+7. 🌐 Integrate model inference with the FastAPI backend and web interface.
+8. ☁️ Deploy the application for online access.
 
-💻 Run Locally
+## 📂 Project Structure
 
-Follow these steps to run CORA-PROJECT on your local machine.
+```text
+CORA-PROJECT/
+├── static/                     # Frontend assets
+├── anaconda_projects/db/       # Project data directory
+├── .ipynb_checkpoints/         # Jupyter notebook checkpoints
+├── gcn_1.ipynb                 # Model development notebook
+├── main.py                     # FastAPI application
+├── cora_data.npz               # Dataset file
+├── simple_gcn_cora.onnx        # Exported GCN model
+├── simple_gcn_cora.onnx.data   # ONNX model data
+├── requirements.txt            # Python dependencies
+└── README.md                   # Project documentation
+```
 
-Prerequisites
+## 🚀 Deployment
 
-* Python 3.10 or a compatible version
-* Git
-* pip
+The application was deployed on **Render**. However, performance was significantly affected by the resource and bandwidth limitations of Render's free tier.
 
-1. Clone the Repository
+You can run the project locally to access the web interface and test the API without relying on the public deployment.
 
+- ☁️ **Platform:** Render
+- ⚠️ **Limitation:** The free tier's resource and bandwidth constraints may affect application performance.
+- 💻 **Alternative:** Local execution using FastAPI.
+
+## 💻 Run Locally
+
+Follow these steps to run the project on your machine.
+
+### 📋 Prerequisites
+
+- Python 3.10 or a compatible version
+- Git
+- pip
+
+### 1️⃣ Clone the Repository
+
+```bash
 git clone https://github.com/snape0931/CORA-PROJECT.git
 cd CORA-PROJECT
+```
 
-2. Create a Virtual Environment
+### 2️⃣ Create a Virtual Environment
 
+```bash
 python -m venv venv
+```
 
-Windows
+**Windows**
 
+```bash
 venv\Scripts\activate
+```
 
-macOS/Linux
+**macOS/Linux**
 
+```bash
 source venv/bin/activate
+```
 
-3. Install Dependencies
+### 3️⃣ Install Dependencies
 
+```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-4. Start the FastAPI Server
+### 4️⃣ Start the FastAPI Server
 
+```bash
 python -m uvicorn main:app --reload
+```
 
-5. Access the Application
+### 5️⃣ Access the Application
 
 Once the server starts, open the following URLs in your browser:
 
-* Web Interface: http://127.0.0.1:8000
-* Interactive API Documentation: http://127.0.0.1:8000/docs
+- 🌐 **Web Interface:** http://127.0.0.1:8000
+- 📖 **Interactive API Documentation:** http://127.0.0.1:8000/docs
 
 The web interface is served locally by the FastAPI application. Keep the terminal running while using the application.
 
-Troubleshooting
+## 🛠️ Troubleshooting
 
-* Ensure all dependencies are installed successfully.
-* Keep simple_gcn_cora.onnx and simple_gcn_cora.onnx.data together in the expected location.
-* Make sure any required dataset files are available.
-* If the server fails to start, check the error message and verify the Python package versions.
+- 📦 Ensure all dependencies are installed successfully.
+- 🔗 Keep `simple_gcn_cora.onnx` and `simple_gcn_cora.onnx.data` together in their expected location.
+- 📊 Ensure all required dataset files are available.
+- 🐍 Verify your Python and package versions if the server fails to start.
+- ⚠️ Check the terminal error messages to identify missing dependencies or incorrect file paths.
 
-Note: Local execution does not require a public deployment. The application is accessible through the local URLs while the server is running.
+**Note:** Local execution does not require a public deployment. The application is accessible through the local URLs while the FastAPI server is running.
 
-👩‍💻 Author
+## 👩‍💻 Author
 
-Saumya Srivastava
+**Saumya Srivastava**
 
-🔗 GitHub Profile
+🔗 [GitHub Profile](https://github.com/snape0931)
+
+🔗 [Project Repository](https://github.com/snape0931/CORA-PROJECT)
+
+---
+
+⭐ If you find this project interesting, consider giving the repository a star!
