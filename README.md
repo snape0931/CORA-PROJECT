@@ -4,7 +4,7 @@ An end-to-end deep learning project that leverages **Graph Convolutional Network
 
 ## 🌐 Live Deployments
 
-- 🚀 **Render — FastAPI Backend:** [Live API](YOUR_RENDER_URL)
+- 🚀 **Render — FastAPI Backend:** [Live API](https://cora-project-68vx.onrender.com/)
 - 🎨 **Streamlit — Web Application:** [Try the App](YOUR_STREAMLIT_URL)
 - 💻 **GitHub Repository:** [CORA-PROJECT](https://github.com/snape0931/CORA-PROJECT)
 
