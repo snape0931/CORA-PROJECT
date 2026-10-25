@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cora Citation Network GCN Explorer | ONNX & FastAPI</title>
+  <meta name="description" content="Interactive UI for Graph Convolutional Network (GCN) node classification on the Cora Citation Network using ONNX Runtime and FastAPI.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <div id="toast-stack" class="toast-stack"></div>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-diagram-project"></i></div>
+        <div class="brand-text">
+          <h1>CORA <span>GCN Predictor</span></h1>
+          <p>ONNX Graph Neural Network Inference API</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="status-badge" id="status-badge">
+          <span class="status-dot pulsing"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+        <a href="/docs" id="docs-link" target="_blank" class="btn btn-outline">
+          <i class="fa-solid fa-code"></i> API Docs
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <section class="metrics-banner">
+      <div class="metric-card">
+        <div class="metric-icon purple"><i class="fa-solid fa-file-lines"></i></div>
+        <div class="metric-content">
+          <div class="metric-value">2,708</div>
+          <div class="metric-label">Research Papers (Nodes)</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon cyan"><i class="fa-solid fa-share-nodes"></i></div>
+        <div class="metric-content">
+          <div class="metric-value">10,556</div>
+          <div class="metric-label">Citations (Edges)</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon emerald"><i class="fa-solid fa-tags"></i></div>
+        <div class="metric-content">
+          <div class="metric-value" id="metric-features">1,433</div>
+          <div class="metric-label">Vocabulary Features</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon amber"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="metric-content">
+          <div class="metric-value" id="metric-classes">7</div>
+          <div class="metric-label">Topic Classes</div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-cora">
+        <i class="fa-solid fa-magnifying-glass"></i> Cora Benchmark Explorer
+      </button>
+      <button class="tab-btn" data-tab="tab-custom">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Custom Paper & Graph Predictor
+      </button>
+      <button class="tab-btn" data-tab="tab-model">
+        <i class="fa-solid fa-microchip"></i> ONNX Model & Latency Benchmark
+      </button>
+    </nav>
+
+    <!-- TAB 1 -->
+    <section class="tab-content active" id="tab-cora">
+      <div class="explorer-grid">
+
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-paperclip"></i> Select Cora Research Papers</h3>
+            <p>Enter node IDs (0 - 2707): one, a list like <code>0, 42, 100</code>, or a range like <code>10-15</code>.</p>
+          </div>
+
+          <div class="card-body">
+            <div class="form-group">
+              <label for="node-id-input">Node Index:</label>
+              <div class="search-input-group">
+                <input type="text" id="node-id-input" value="0" placeholder="e.g. 0, 42, 100-105" autocomplete="off">
+                <button class="btn btn-primary" id="btn-predict-cora">
+                  <i class="fa-solid fa-bolt"></i> Classify
+                </button>
+              </div>
+            </div>
+
+            <div class="preset-section">
+              <label>Quick Sample Nodes:</label>
+              <div class="preset-chips">
+                <button class="chip" data-nodes="0">Node #0</button>
+                <button class="chip" data-nodes="42">Node #42</button>
+                <button class="chip" data-nodes="100">Node #100</button>
+                <button class="chip" data-nodes="500">Node #500</button>
+                <button class="chip" data-nodes="1000">Node #1000</button>
+                <button class="chip" data-nodes="2000">Node #2000</button>
+                <button class="chip" data-nodes="0-5">Nodes 0-5</button>
+                <button class="chip" id="btn-random-node"><i class="fa-solid fa-dice"></i> Random 6</button>
+              </div>
+            </div>
+
+            <div class="graph-viz-container">
+              <div class="viz-header">
+                <span><i class="fa-solid fa-circle-nodes"></i> Local Citation Graph Visualizer</span>
+                <span class="badge" id="graph-node-count">Node #0 context</span>
+              </div>
+              <canvas id="citation-canvas"></canvas>
+              <div class="legend" id="citation-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> GCN Prediction Results</h3>
+            <p>ONNX inference logits & softmax class probabilities</p>
+          </div>
+
+          <div class="card-body" id="cora-results-body">
+            <div class="empty-state" id="cora-empty-state">
+              <i class="fa-solid fa-brain"></i>
+              <p>Select nodes and click <strong>Classify</strong> to view GCN predictions.</p>
+            </div>
+
+            <div class="results-container hidden" id="cora-results-container">
+
+              <div class="overview hidden" id="cora-overview">
+                <div class="overview-head">
+                  <span>Papers</span>
+                  <span class="badge" id="overview-count">0 papers</span>
+                </div>
+                <div class="overview-list" id="overview-list"></div>
+                <div class="topic-dist hidden" id="topic-dist"></div>
+              </div>
+
+              <div class="prediction-hero-card" id="prediction-hero">
+                <div class="pred-label" id="pred-paper-label">Paper #0</div>
+                <div class="pred-topic-badge" id="pred-topic-title">
+                  <i class="fa-solid fa-graduation-cap"></i> <span id="pred-topic-name">-</span>
+                </div>
+                <div class="pred-confidence">
+                  Confidence: <strong id="pred-confidence-pct">-</strong>
+                </div>
+              </div>
+
+              <div class="probs-section">
+                <div class="probs-head">
+                  <h4><i class="fa-solid fa-bars-staggered"></i> Topic Probabilities</h4>
+                  <label class="switch">
+                    <input type="checkbox" id="toggle-logits"> <span>Show logits</span>
+                  </label>
+                </div>
+                <div class="prob-bars-list" id="prob-bars-list"></div>
+              </div>
+
+              <details class="details-card">
+                <summary><i class="fa-solid fa-code"></i> Raw ONNX Model Logits</summary>
+                <pre class="json-code" id="raw-logits-code">{}</pre>
+              </details>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2 -->
+    <section class="tab-content" id="tab-custom">
+      <div class="card glass-card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Classify Custom Research Papers & Citation Graph</h3>
+          <p>Build a custom graph with paper feature vectors and citation edges, then send it to <code>POST /predict</code>. You can edit the JSON directly.</p>
+        </div>
+
+        <div class="card-body">
+          <div class="custom-builder-grid">
+
+            <div class="builder-controls">
+              <div class="form-group">
+                <label for="num-custom-nodes">Number of Custom Papers (1 - 20):</label>
+                <input type="number" id="num-custom-nodes" min="1" max="20" value="3">
+              </div>
+
+              <div class="form-group">
+                <label for="custom-topology">Citation Topology:</label>
+                <select id="custom-topology">
+                  <option value="ring" selected>Ring (each cites the next)</option>
+                  <option value="chain">Chain</option>
+                  <option value="random">Random links</option>
+                  <option value="none">No edges (self-loops only)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Paper Feature Vector Mode:</label>
+                <div class="radio-group">
+                  <label class="radio-label"><input type="radio" name="feature-mode" value="preset_a" checked> Preset word set A</label>
+                  <label class="radio-label"><input type="radio" name="feature-mode" value="preset_b"> Preset word set B</label>
+                  <label class="radio-label"><input type="radio" name="feature-mode" value="random"> Random sparse features</label>
+                </div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn btn-outline" id="btn-regenerate"><i class="fa-solid fa-rotate"></i> Regenerate</button>
+                <button class="btn btn-emerald" id="btn-predict-custom">
+                  <i class="fa-solid fa-paper-plane"></i> Run Inference
+                </button>
+              </div>
+            </div>
+
+            <div class="builder-preview">
+              <div class="preview-header">
+                <span>API Request Payload (<code>POST /predict</code>)</span>
+                <span class="badge cyan">JSON</span>
+              </div>
+              <textarea id="custom-payload-editor" rows="12" class="json-editor" spellcheck="false"></textarea>
+              <div class="payload-stats" id="payload-stats"></div>
+            </div>
+
+          </div>
+
+          <div class="custom-results-wrapper hidden" id="custom-results-wrapper">
+            <hr class="divider">
+            <h3 class="section-title"><i class="fa-solid fa-square-poll-vertical"></i> Custom Graph Predictions</h3>
+
+            <div class="graph-viz-container">
+              <div class="viz-header">
+                <span><i class="fa-solid fa-circle-nodes"></i> Your graph</span>
+                <span class="badge cyan" id="custom-graph-meta">-</span>
+              </div>
+              <canvas id="custom-graph-canvas"></canvas>
+              <div class="legend" id="custom-graph-legend"></div>
+            </div>
+
+            <div class="custom-nodes-results-grid" id="custom-nodes-results-grid"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3 -->
+    <section class="tab-content" id="tab-model">
+      <div class="model-grid">
+
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-microchip"></i> ONNX Model Architecture Specs</h3>
+            <p>2-Layer Graph Convolutional Network (SimpleGCN)</p>
+          </div>
+          <div class="card-body">
+            <table class="specs-table">
+              <tr><td><i class="fa-solid fa-file-code"></i> Model File</td><td><code id="spec-file">simple_gcn_cora.onnx</code></td></tr>
+              <tr><td><i class="fa-solid fa-cube"></i> Framework</td><td>PyTorch Geometric &rarr; ONNX</td></tr>
+              <tr><td><i class="fa-solid fa-server"></i> Execution Provider</td><td><span class="pill green" id="spec-provider">-</span></td></tr>
+              <tr><td><i class="fa-solid fa-network-wired"></i> Input: Node Features</td><td><code id="spec-input-x">-</code></td></tr>
+              <tr><td><i class="fa-solid fa-timeline"></i> Input: Edge Indices</td><td><code id="spec-input-edge">-</code></td></tr>
+              <tr><td><i class="fa-solid fa-bullseye"></i> Output: Logits</td><td><code id="spec-output">-</code></td></tr>
+            </table>
+
+            <div class="class-chips-title">Topic classes</div>
+            <div class="class-chips" id="class-chips"></div>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-gauge-high"></i> ONNX Inference Benchmark</h3>
+            <p>Measure end-to-end API latency (5 requests)</p>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="bench-target">Benchmark target:</label>
+              <select id="bench-target">
+                <option value="cora" selected>POST /predict/cora_node (5 Cora papers)</option>
+                <option value="custom">POST /predict (6 custom papers)</option>
+              </select>
+            </div>
+
+            <div class="benchmark-box">
+              <div class="bench-number" id="bench-ms">-- ms</div>
+              <div class="bench-desc" id="bench-desc">Average API latency</div>
+              <div class="bench-runs" id="bench-runs"></div>
+              <button class="btn btn-primary" id="btn-run-benchmark">
+                <i class="fa-solid fa-stopwatch"></i> Run Latency Benchmark
+              </button>
+            </div>
+
+            <div class="benchmark-details" id="bench-details">
+              <p><i class="fa-solid fa-circle-info"></i> Click the button above to run 5 benchmark requests.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Cora Citation Network GCN Explorer &bull; Powered by <strong>PyTorch Geometric</strong>, <strong>ONNX Runtime</strong> & <strong>FastAPI</strong></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
