@@ -1,6 +1,6 @@
 # 🧠 Research Topic Classification using GCN
 
-An end-to-end machine learning project that leverages **Graph Convolutional Networks (GCNs)** to classify research papers into different topics using the **Cora citation network**. This project combines graph-based learning, PyTorch, ONNX model export, and efficient inference.
+An end-to-end deep learning project that leverages **Graph Convolutional Networks (GCNs)** to classify research papers into different topics using the **Cora citation network**. This project combines graph-based learning, PyTorch, ONNX model export, and efficient inference.
 
 ## 🌐 Live Deployments
 
