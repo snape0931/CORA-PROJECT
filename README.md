@@ -82,10 +82,6 @@ The application was deployed on **Render**. However, performance was significant
 
 You can run the project locally to access the web interface and test the API without relying on the public deployment.
 
-- ☁️ **Platform:** Render
-- ⚠️ **Limitation:** The free tier's resource and bandwidth constraints may affect application performance.
-- 💻 **Alternative:** Local execution using FastAPI.
-
 ## 💻 Run Locally
 
 Follow these steps to run the project on your machine.
@@ -142,25 +138,11 @@ Once the server starts, open the following URLs in your browser:
 - 📖 **Interactive API Documentation:** http://127.0.0.1:8000/docs
 
 The web interface is served locally by the FastAPI application. Keep the terminal running while using the application.
-
-## 🛠️ Troubleshooting
-
-- 📦 Ensure all dependencies are installed successfully.
-- 🔗 Keep `simple_gcn_cora.onnx` and `simple_gcn_cora.onnx.data` together in their expected location.
-- 📊 Ensure all required dataset files are available.
-- 🐍 Verify your Python and package versions if the server fails to start.
-- ⚠️ Check the terminal error messages to identify missing dependencies or incorrect file paths.
-
 **Note:** Local execution does not require a public deployment. The application is accessible through the local URLs while the FastAPI server is running.
 
 ## 👩‍💻 Author
 
 **Saumya Srivastava**
 
-🔗 [GitHub Profile](https://github.com/snape0931)
-
 🔗 [Project Repository](https://github.com/snape0931/CORA-PROJECT)
 
----
-
-⭐ If you find this project interesting, consider giving the repository a star!
