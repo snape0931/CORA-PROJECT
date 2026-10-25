@@ -21,14 +21,13 @@ An end-to-end deep learning project that leverages **Graph Convolutional Network
 
 | Technology | Purpose |
 |---|---|
-| 🐍 Python | Core programming language |
-| 🔥 PyTorch | GCN model development |
-| 📚 Cora Dataset | Citation network for classification |
-| ⚡ ONNX | Model export and interoperability |
-| 🚀 ONNX Runtime | Model inference |
-| 🌐 FastAPI | Backend API |
-| 🎨 Streamlit | Interactive web application |
-| 📓 Jupyter Notebook | Model development and experimentation |
+| Python | Core programming language |
+| PyTorch | GCN model development |
+| Cora Dataset | Citation network for classification |
+| ONNX | Model export and interoperability |
+| ONNX Runtime | Model inference |
+| FastAPI | Backend API |
+| Jupyter Notebook | Model development and experimentation |
 
 ## 📂 Project Structure
 
@@ -38,7 +37,6 @@ CORA-PROJECT/
 ├── 📓 gcn_1.ipynb
 ├── 📓 Untitled.ipynb
 ├── 🐍 main.py
-├── 🎨 streamlit_app.py
 ├── ⚡ simple_gcn_cora.onnx
 ├── 📦 simple_gcn_cora.onnx.data
 └── 📋 requirements.txt
@@ -73,14 +71,6 @@ The project uses the **Cora citation network**, a benchmark dataset for graph-ba
 6. 🎯 Generate research topic predictions.
 7. 🌐 Integrate model inference with the application interface.
 8. ☁️ Deploy the backend and web application.
-
-## 🚀 Future Improvements
-
-- 📊 Add accuracy, precision, recall, and F1-score metrics.
-- 🔍 Compare GCN performance with traditional machine learning models.
-- 💡 Add prediction confidence scores and explainability.
-- 🧪 Implement automated tests for inference and API endpoints.
-- 🖼️ Add screenshots and a demonstration video.
 
 ## 👩‍💻 Author
 
