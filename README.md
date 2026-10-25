@@ -143,6 +143,3 @@ The web interface is served locally by the FastAPI application. Keep the termina
 ## 👩‍💻 Author
 
 **Saumya Srivastava**
-
-🔗 [Project Repository](https://github.com/snape0931/CORA-PROJECT)
-
