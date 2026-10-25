@@ -2,15 +2,9 @@
 
 An end-to-end deep learning project that leverages **Graph Convolutional Networks (GCNs)** to classify research papers into different topics using the **Cora citation network**. This project combines graph-based learning, PyTorch, ONNX model export, and efficient inference.
 
-## 🚀 Live Demo
+## 🚀 Deployment Note
 
-⚠️ **Deployment Note:** The Render deployment experienced performance issues due to limited bandwidth and resources available on the free tier.
-
-## 💻 Local Access
-
-- 🖥️ **Localhost:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-
-  *Available only when the FastAPI server is running locally on your computer.*
+⚠️ The application was deployed on Render. However, performance was severely affected by the bandwidth and resource limitations of Render's free tier.
 - 💻 **GitHub Repository:** [CORA-PROJECT](https://github.com/snape0931/CORA-PROJECT)
 
 ## ✨ Features
