@@ -1,500 +1,350 @@
-"""Cora GCN Explorer: Streamlit front-end for the FastAPI service in main.py.
-
-1. Start the API:   uvicorn main:app --reload
-2. Start this UI:   streamlit run streamlit_app.py --theme.base dark
 """
-import json
-import math
-import re
-from collections import Counter
+Cora GCN Explorer — Streamlit UI
+Talks to the FastAPI service (main.py) that serves the ONNX GCN model.
 
-import altair as alt
-import numpy as np
-import pandas as pd
+Run with:
+    streamlit run streamlit_app.py
+"""
+
+import json
+import random
+
 import requests
 import streamlit as st
+import pandas as pd
+
+# ----------------------------------------------------------------------------
+# Config / constants (mirrors the FastAPI service)
+# ----------------------------------------------------------------------------
+
+st.set_page_config(
+    page_title="Cora GCN Explorer",
+    page_icon="◆",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+CORA_CLASSES = {
+    0: "Case_Based",
+    1: "Genetic_Algorithms",
+    2: "Neural_Networks",
+    3: "Probabilistic_Methods",
+    4: "Reinforcement_Learning",
+    5: "Rule_Learning",
+    6: "Theory",
+}
+
+CLASS_COLORS = {
+    0: "#e3a548",  # Case_Based
+    1: "#7fb77e",  # Genetic_Algorithms
+    2: "#4fd1c5",  # Neural_Networks
+    3: "#8c7ae6",  # Probabilistic_Methods
+    4: "#e0705f",  # Reinforcement_Learning
+    5: "#5b9bd5",  # Rule_Learning
+    6: "#d488b9",  # Theory
+}
 
 FEATURE_DIM = 1433
-CORA_NODES = 2708
-MAX_CUSTOM_NODES = 20
-COLORS = ["#60a5fa", "#f472b6", "#34d399", "#fbbf24", "#a78bfa", "#fb923c", "#2dd4bf"]
-DEFAULT_CLASSES = {
-    0: "Case_Based", 1: "Genetic_Algorithms", 2: "Neural_Networks", 3: "Probabilistic_Methods",
-    4: "Reinforcement_Learning", 5: "Rule_Learning", 6: "Theory",
-}
-SPARSE, DENSE = "Sparse indices", "Dense JSON"
 
-st.set_page_config(page_title="Cora GCN Explorer", page_icon="◈", layout="wide")
+# ----------------------------------------------------------------------------
+# Theming — dark, matching the HTML build (near-black bg, amber + teal accents)
+# ----------------------------------------------------------------------------
+
 st.markdown(
     """
     <style>
-      div[data-testid="stMetric"] {
-        background: #141c2b; border: 1px solid #25314a; border-radius: 14px; padding: 14px 18px;
-      }
-      .block-container { padding-top: 2rem; max-width: 1200px; }
+    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"]  { font-family: 'JetBrains Mono', monospace; }
+
+    .stApp {
+        background:
+          radial-gradient(circle at 12% 8%, rgba(227,165,72,0.06), transparent 40%),
+          radial-gradient(circle at 88% 92%, rgba(79,209,197,0.06), transparent 40%),
+          #0a0c10;
+        color: #e8e6df;
+    }
+
+    h1, h2, h3 { font-family: 'Newsreader', serif !important; font-weight: 600 !important; color: #f4f2ea !important; }
+
+    .eyebrow {
+        display:inline-flex; align-items:center; gap:8px; font-size:11px; letter-spacing:0.14em;
+        text-transform:uppercase; color:#4fd1c5; border:1px solid rgba(79,209,197,0.3);
+        background:rgba(79,209,197,0.06); padding:5px 12px; border-radius:100px; margin-bottom:14px;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: #12151c; border-right: 1px solid #232733;
+    }
+
+    div[data-testid="stMetric"] {
+        background: #161a22; border: 1px solid #232733; border-radius: 12px; padding: 12px 16px;
+    }
+    div[data-testid="stMetricLabel"] { color: #8b90a0 !important; }
+
+    .card {
+        background:#161a22; border:1px solid #232733; border-radius:12px;
+        padding:18px 20px; margin-bottom:14px;
+    }
+    .node-tag { font-size:11px; color:#565c6d; letter-spacing:0.05em; }
+    .predicted-name { font-family:'Newsreader', serif; font-size:19px; font-weight:600; }
+    .conf-text { font-size:11px; color:#8b90a0; }
+
+    .legend-chip {
+        display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#8b90a0;
+        border:1px solid #1b1f29; padding:5px 10px; border-radius:100px; background:#161a22; margin:2px;
+    }
+    .legend-sw { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+    .stButton > button {
+        background:#e3a548; color:#171207; border:none; font-weight:700; border-radius:9px;
+        font-family:'JetBrains Mono', monospace; letter-spacing:0.02em;
+    }
+    .stButton > button:hover { filter:brightness(1.08); color:#171207; }
+
+    div[data-baseweb="tab-list"] { gap: 4px; }
+    button[data-baseweb="tab"] { font-family:'JetBrains Mono', monospace; }
+
+    .stTextInput input, .stTextArea textarea, .stNumberInput input {
+        background:#161a22 !important; border:1px solid #232733 !important; color:#e8e6df !important;
+        font-family:'JetBrains Mono', monospace !important;
+    }
+
+    hr { border-color: #1b1f29 !important; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+# ----------------------------------------------------------------------------
+# Sidebar — API connection
+# ----------------------------------------------------------------------------
 
-# ----------------------------------------------------------------- helpers
-def pretty(name):
-    return str(name).replace("_", " ")
-
-
-def probs_of(p):
-    """Probabilities for one prediction. Works with both the new key and the old misspelled one."""
-    return p.get("probabilities") or p.get("probabilites") or []
-
-
-def api_get(base, path):
-    r = requests.get(base.rstrip("/") + path, timeout=30)
-    r.raise_for_status()
-    return r.json()
-
-
-def api_post(base, path, payload):
-    r = requests.post(base.rstrip("/") + path, json=payload, timeout=180)
-    if not r.ok:
-        try:
-            detail = r.json().get("detail", r.text)
-        except ValueError:
-            detail = r.text
-        raise RuntimeError(str(detail))
-    return r.json()
-
-
-def render_chart(chart):
-    try:
-        st.altair_chart(chart, use_container_width=True)
-    except TypeError:  # newer Streamlit versions dropped the argument
-        st.altair_chart(chart)
-
-
-def render_df(df, **kwargs):
-    try:
-        st.dataframe(df, use_container_width=True, hide_index=True, **kwargs)
-    except TypeError:
-        st.dataframe(df, hide_index=True, **kwargs)
-
-
-def parse_indices(text):
-    out = []
-    for part in re.split(r"[,\s;]+", text.strip()):
-        if not part:
-            continue
-        m = re.fullmatch(r"(\d+)(?:-(\d+))?", part)
-        if not m:
-            raise ValueError(f'"{part}" is not a valid index or range.')
-        a = int(m.group(1))
-        b = int(m.group(2)) if m.group(2) is not None else a
-        if b < a:
-            raise ValueError(f"The range {part} runs backwards.")
-        out.extend(range(a, b + 1))
-        if len(out) > 200:
-            raise ValueError("Please request at most 200 papers at a time.")
-    if not out:
-        raise ValueError("Enter at least one paper index.")
-    bad = [i for i in out if i >= CORA_NODES]
-    if bad:
-        raise ValueError(f"Index {bad[0]} is out of range (valid: 0-{CORA_NODES - 1}).")
-    return list(dict.fromkeys(out))
-
-
-def parse_nodes(text, mode):
-    if not text.strip():
-        raise ValueError("Add node features first, or click 'Generate random graph'.")
-    if mode == SPARSE:
-        vectors = []
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-        for k, line in enumerate(lines, start=1):
-            vec = [0.0] * FEATURE_DIM
-            for tok in re.split(r"[,\s]+", line):
-                if not tok:
-                    continue
-                if not tok.isdigit():
-                    raise ValueError(f'Line {k}: "{tok}" is not a feature index.')
-                i = int(tok)
-                if i >= FEATURE_DIM:
-                    raise ValueError(f"Line {k}: feature index {i} is out of range (0-{FEATURE_DIM - 1}).")
-                vec[i] = 1.0
-            vectors.append(vec)
-        return vectors
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"The dense features are not valid JSON: {exc}")
-    if not isinstance(parsed, list) or not parsed or not all(isinstance(v, list) for v in parsed):
-        raise ValueError("Dense features must be a list of lists, one inner list per paper.")
-    for k, v in enumerate(parsed):
-        if len(v) != FEATURE_DIM:
-            raise ValueError(f"Paper {k} has {len(v)} features; expected {FEATURE_DIM}.")
-    return parsed
-
-
-def parse_edges(text, n, undirected):
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    if not lines:
-        return None
-    seen, src, dst = set(), [], []
-
-    def add(a, b):
-        if (a, b) not in seen:
-            seen.add((a, b))
-            src.append(a)
-            dst.append(b)
-
-    for k, line in enumerate(lines, start=1):
-        nums = re.findall(r"\d+", line)
-        if len(nums) != 2:
-            raise ValueError(f"Edge line {k} must contain exactly two node numbers.")
-        a, b = int(nums[0]), int(nums[1])
-        if a >= n or b >= n:
-            raise ValueError(f"Edge line {k}: node {max(a, b)} does not exist (the graph has {n} nodes, 0-{n - 1}).")
-        add(a, b)
-        if undirected:
-            add(b, a)
-    return [src, dst]
-
-
-def format_nodes(active_lists, mode):
-    if mode == SPARSE:
-        return "\n".join(", ".join(map(str, a)) for a in active_lists)
-    rows = []
-    for a in active_lists:
-        v = [0] * FEATURE_DIM
-        for i in a:
-            v[i] = 1
-        rows.append(json.dumps(v))
-    return "[\n  " + ",\n  ".join(rows) + "\n]"
-
-
-def generate_graph():
-    """Callback: fill the node/edge text areas with a random graph."""
-    ss = st.session_state
-    n = int(ss.gen_n)
-    density = float(ss.gen_density) / 100
-    rng = np.random.default_rng()
-
-    active = []
-    for _ in range(n):
-        k = max(1, int(round(FEATURE_DIM * density * rng.uniform(0.7, 1.3))))
-        active.append(sorted(rng.choice(FEATURE_DIM, size=k, replace=False).tolist()))
-    ss.nodes_text = format_nodes(active, ss.feat_mode)
-
-    edges = []
-    if ss.gen_topo == "Ring" and n > 1:
-        edges = [f"{i} {(i + 1) % n}" for i in range(n)]
-    elif ss.gen_topo == "Random neighbours" and n > 1:
-        for i in range(n):
-            others = [j for j in range(n) if j != i]
-            for j in rng.choice(others, size=min(2, len(others)), replace=False).tolist():
-                edges.append(f"{i} {j}")
-    ss.edges_text = "\n".join(edges)
-    ss.undirected = True
-
-
-def randomize_cora():
-    picks = sorted(np.random.choice(CORA_NODES, size=6, replace=False).tolist())
-    st.session_state.cora_idx = ", ".join(map(str, picks))
-    st.session_state.cora_autorun = True
-
-
-# ----------------------------------------------------------------- charts
-def class_color_scale(class_names):
-    ids = sorted(class_names)
-    return alt.Scale(
-        domain=[pretty(class_names[i]) for i in ids],
-        range=[COLORS[i % len(COLORS)] for i in ids],
-    )
-
-
-def prob_chart(p, class_names):
-    probs = probs_of(p)
-    ids = list(range(len(probs)))
-    df = pd.DataFrame(
-        {
-            "Topic": [pretty(class_names.get(i, f"Class {i}")) for i in ids],
-            "Probability": probs,
-            "Logit": p["logits"],
-        }
-    )
-    return (
-        alt.Chart(df)
-        .mark_bar(cornerRadiusEnd=4)
-        .encode(
-            y=alt.Y("Topic:N", sort="-x", title=None),
-            x=alt.X("Probability:Q", scale=alt.Scale(domain=[0, 1]), axis=alt.Axis(format="%")),
-            color=alt.Color("Topic:N", scale=class_color_scale(class_names), legend=None),
-            tooltip=["Topic", alt.Tooltip("Probability:Q", format=".2%"), alt.Tooltip("Logit:Q", format=".3f")],
-        )
-        .properties(height=230)
-    )
-
-
-def distribution_chart(preds, class_names):
-    counts = Counter(p["predicted_class_id"] for p in preds)
-    df = pd.DataFrame(
-        {
-            "Topic": [pretty(class_names[i]) for i in sorted(class_names)],
-            "Papers": [counts.get(i, 0) for i in sorted(class_names)],
-        }
-    )
-    return (
-        alt.Chart(df)
-        .mark_bar(cornerRadiusEnd=4)
-        .encode(
-            y=alt.Y("Topic:N", sort=None, title=None),
-            x=alt.X("Papers:Q", axis=alt.Axis(tickMinStep=1)),
-            color=alt.Color("Topic:N", scale=class_color_scale(class_names), legend=None),
-            tooltip=["Topic", "Papers"],
-        )
-        .properties(height=230)
-    )
-
-
-def graph_chart(preds, edges, class_names):
-    n = len(preds)
-    ang = np.linspace(0, 2 * math.pi, n, endpoint=False) - math.pi / 2
-    x, y = np.cos(ang), np.sin(ang)
-    nodes = pd.DataFrame(
-        {
-            "x": x,
-            "y": y,
-            "Paper": list(range(n)),
-            "Topic": [pretty(class_names[p["predicted_class_id"]]) for p in preds],
-        }
-    )
-    dom = alt.Scale(domain=[-1.35, 1.35])
-    ax = alt.Axis(labels=False, ticks=False, domain=False, grid=False, title=None)
-    layers = []
-    if edges:
-        pairs = [(s, d) for s, d in zip(edges[0], edges[1]) if s != d]
-        if pairs:
-            seg = pd.DataFrame(
-                {
-                    "x": [x[s] for s, _ in pairs], "y": [y[s] for s, _ in pairs],
-                    "x2": [x[d] for _, d in pairs], "y2": [y[d] for _, d in pairs],
-                }
-            )
-            layers.append(
-                alt.Chart(seg)
-                .mark_rule(color="#8e9bb5", opacity=0.35)
-                .encode(x=alt.X("x:Q", scale=dom, axis=ax), y=alt.Y("y:Q", scale=dom, axis=ax), x2="x2:Q", y2="y2:Q")
-            )
-    points = (
-        alt.Chart(nodes)
-        .mark_circle(size=520, stroke="#0a0e16", strokeWidth=2)
-        .encode(
-            x=alt.X("x:Q", scale=dom, axis=ax),
-            y=alt.Y("y:Q", scale=dom, axis=ax),
-            color=alt.Color("Topic:N", scale=class_color_scale(class_names), legend=alt.Legend(orient="bottom")),
-            tooltip=["Paper", "Topic"],
-        )
-    )
-    labels = (
-        alt.Chart(nodes)
-        .mark_text(color="#0a0e16", fontWeight="bold", fontSize=12)
-        .encode(x=alt.X("x:Q", scale=dom), y=alt.Y("y:Q", scale=dom), text="Paper:N")
-    )
-    layers += [points, labels]
-    return alt.layer(*layers).properties(height=340).configure_view(strokeWidth=0)
-
-
-def feature_map_image(vec, cols=48, cell=6):
-    arr = np.zeros(cols * math.ceil(FEATURE_DIM / cols))
-    arr[:FEATURE_DIM] = np.abs(np.asarray(vec, dtype=float))
-    grid = arr.reshape(-1, cols)
-    grid = np.clip(grid / (grid.max() or 1), 0, 1)
-    base, accent = np.array([26, 36, 56]), np.array([108, 140, 255])
-    img = base + (accent - base) * grid[..., None]
-    return img.repeat(cell, axis=0).repeat(cell, axis=1).astype(np.uint8)
-
-
-# ----------------------------------------------------------------- results
-def show_results(data, class_names, show_logits, vectors=None, edges=None):
-    preds = data["predictions"]
-    confs = [max(probs_of(p)) for p in preds]
-
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Nodes in graph", f"{data['num_nodes']:,}")
-    m2.metric("Edges in graph", f"{data['num_edges']:,}")
-    m3.metric("Papers predicted", len(preds))
-    m4.metric("Mean confidence", f"{np.mean(confs):.1%}")
-
-    summary = pd.DataFrame(
-        {
-            "Paper": [p["node_index"] for p in preds],
-            "Predicted topic": [pretty(p["predicted_class_name"]) for p in preds],
-            "Confidence (%)": [c * 100 for c in confs],
-        }
-    )
-    left, right = st.columns(2)
-    with left:
-        st.markdown("##### Predictions")
-        render_df(
-            summary,
-            column_config={
-                "Confidence (%)": st.column_config.ProgressColumn(
-                    "Confidence", min_value=0, max_value=100, format="%.1f%%"
-                )
-            },
-        )
-    with right:
-        st.markdown("##### Predicted topics")
-        render_chart(distribution_chart(preds, class_names))
-
-    if vectors is not None and len(preds) > 1:
-        st.markdown("##### Graph view")
-        render_chart(graph_chart(preds, edges, class_names))
-
-    st.markdown("##### Per-paper details")
-    for p in preds:
-        conf = max(probs_of(p))
-        title = f"Paper #{p['node_index']}  →  {pretty(p['predicted_class_name'])}  ·  {conf:.1%}"
-        with st.expander(title, expanded=len(preds) <= 2):
-            if vectors is not None:
-                chart_col, feat_col = st.columns([3, 2])
-            else:
-                chart_col, feat_col = st.container(), None
-            with chart_col:
-                render_chart(prob_chart(p, class_names))
-                if show_logits:
-                    render_df(
-                        pd.DataFrame(
-                            {
-                                "Topic": [pretty(class_names.get(i, i)) for i in range(len(p["logits"]))],
-                                "Logit": p["logits"],
-                                "Probability": probs_of(p),
-                            }
-                        )
-                    )
-            if feat_col is not None:
-                with feat_col:
-                    vec = vectors[p["node_index"]]
-                    active = [i for i, v in enumerate(vec) if v]
-                    st.image(feature_map_image(vec), width=288)
-                    st.caption(f"{len(active)} of {FEATURE_DIM} features active ({len(active) / FEATURE_DIM:.1%})")
-                    if active:
-                        shown = ", ".join(f"#{i}" for i in active[:14])
-                        extra = f" +{len(active) - 14} more" if len(active) > 14 else ""
-                        st.code(shown + extra, language=None)
-
-    with st.expander("Raw JSON response"):
-        st.json(data)
-
-
-# ----------------------------------------------------------------- sidebar
 with st.sidebar:
-    st.title("◈ Cora GCN")
-    st.caption("Classify research papers by topic with a graph neural network.")
-    api_url = st.text_input("FastAPI URL", "http://127.0.0.1:8000")
-    show_logits = st.toggle("Show raw logits", value=False)
+    st.markdown("### Connection")
+    api_base = st.text_input("API base URL", value="https://cora-project-68vx.onrender.com/").rstrip("/")
 
-    info = None
-    try:
-        health = api_get(api_url, "/health")
-        info = api_get(api_url, "/info")
-        st.success(f"API online · {', '.join(health.get('providers', []))}")
-    except Exception as exc:
-        st.error(f"Cannot reach the API: {exc}")
+    if st.button("Check health", use_container_width=True):
+        st.session_state["_check_health"] = True
 
-if info is None:
-    st.warning("Start the API first (`uvicorn main:app --reload`), then check the URL in the sidebar.")
-    st.stop()
+    health_placeholder = st.empty()
 
-class_names = {int(k): v for k, v in info.get("class_mapping", DEFAULT_CLASSES).items()}
+    def render_health():
+        try:
+            res = requests.get(f"{api_base}/health", timeout=5)
+            res.raise_for_status()
+            data = res.json()
+            providers = ", ".join(data.get("providers", [])) or "ready"
+            health_placeholder.success(f"online · {providers}")
+        except Exception as exc:  # noqa: BLE001
+            health_placeholder.error(f"unreachable: {exc}")
 
-# ----------------------------------------------------------------- state defaults
-ss = st.session_state
-ss.setdefault("cora_idx", "0, 1, 2, 3, 4, 5")
-ss.setdefault("gen_n", 6)
-ss.setdefault("gen_density", 1.3)
-ss.setdefault("gen_topo", "Random neighbours")
-ss.setdefault("feat_mode", SPARSE)
-ss.setdefault("undirected", True)
-if "nodes_text" not in ss:
-    generate_graph()
+    render_health()
 
+    st.markdown("---")
+    st.markdown("### Model")
+    st.caption("SimpleGCN · ONNX Runtime")
+    st.markdown(
+        f"""
+        - **Feature dimension:** {FEATURE_DIM}
+        - **Classes:** {len(CORA_CLASSES)}
+        - **Dataset:** Cora citation network
+        """
+    )
+    st.markdown("---")
+    st.markdown("### Topic legend")
+    legend_html = "".join(
+        f'<span class="legend-chip"><span class="legend-sw" style="background:{CLASS_COLORS[i]}"></span>{name.replace("_"," ")}</span>'
+        for i, name in CORA_CLASSES.items()
+    )
+    st.markdown(legend_html, unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------------
+# Header
+# ----------------------------------------------------------------------------
+
+st.markdown('<div class="eyebrow">◆ graph neural network · node classification</div>', unsafe_allow_html=True)
 st.title("Cora GCN Explorer")
-tab_cora, tab_custom, tab_info = st.tabs(["Cora papers", "Custom graph", "Model info"])
+st.caption(
+    "Classify citation-network papers into one of seven research topics using a trained "
+    "graph convolutional network, served over ONNX Runtime."
+)
+st.write("")
 
-# ----------------------------------------------------------------- tab 1
+# ----------------------------------------------------------------------------
+# Result rendering helpers
+# ----------------------------------------------------------------------------
+
+def render_predictions(data: dict):
+    col1, col2 = st.columns(2)
+    col1.metric("Nodes in graph", data.get("num_nodes", "–"))
+    col2.metric("Edges in graph", data.get("num_edges", "–"))
+    st.write("")
+
+    for pred in data.get("predictions", []):
+        class_id = pred["predicted_class_id"]
+        color = CLASS_COLORS[class_id]
+        name = pred["predicted_class_name"].replace("_", " ")
+        conf = pred["probabilities"][class_id] * 100
+
+        with st.container():
+            st.markdown(
+                f"""
+                <div class="card">
+                    <div class="node-tag">NODE #{pred['node_index']}</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                        <span style="width:10px;height:10px;border-radius:3px;background:{color};display:inline-block;"></span>
+                        <span class="predicted-name">{name}</span>
+                        <span class="conf-text">{conf:.1f}% confidence</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            df = pd.DataFrame(
+                {
+                    "topic": [c.replace("_", " ") for c in CORA_CLASSES.values()],
+                    "probability": pred["probabilities"],
+                    "class_id": list(CORA_CLASSES.keys()),
+                }
+            ).sort_values("probability", ascending=True)
+
+            for _, row in df.iterrows():
+                bar_color = CLASS_COLORS[int(row["class_id"])]
+                pct = row["probability"] * 100
+                bcol1, bcol2, bcol3 = st.columns([2.2, 5, 1])
+                with bcol1:
+                    st.markdown(
+                        f"<span style='font-size:12px;color:{'#f4f2ea' if int(row['class_id'])==class_id else '#8b90a0'}'>{row['topic']}</span>",
+                        unsafe_allow_html=True,
+                    )
+                with bcol2:
+                    st.markdown(
+                        f"""
+                        <div style="background:#1b1f29;border-radius:100px;height:8px;overflow:hidden;margin-top:4px;">
+                            <div style="width:{pct:.1f}%;height:100%;background:{bar_color};border-radius:100px;"></div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with bcol3:
+                    st.markdown(f"<span style='font-size:11px;color:#565c6d;'>{pct:.1f}%</span>", unsafe_allow_html=True)
+
+            with st.expander("Raw logits"):
+                st.code(json.dumps([round(v, 4) for v in pred["logits"]]), language="json")
+
+            st.write("")
+
+
+# ----------------------------------------------------------------------------
+# Main tabs — real Cora nodes vs. custom graph
+# ----------------------------------------------------------------------------
+
+tab_cora, tab_custom = st.tabs(["Real Cora papers", "Custom graph"])
+
 with tab_cora:
-    st.subheader("Predict real Cora papers")
-    st.caption(f"Enter paper indices from 0 to {CORA_NODES - 1}. Commas and ranges work, e.g. 0, 5, 10-15.")
-    c_in, c_go, c_rand = st.columns([6, 1, 1])
-    c_in.text_input("Paper indices", key="cora_idx", label_visibility="collapsed")
-    go = c_go.button("Predict", type="primary", key="cora_go")
-    c_rand.button("Random 6", on_click=randomize_cora, key="cora_rand")
+    st.markdown("Query real papers from the Cora citation dataset by index (0–2707).")
+    indices_raw = st.text_input("Node indices (comma-separated)", value="0, 1, 2, 3", key="cora_indices")
 
-    if go or ss.pop("cora_autorun", False):
+    if st.button("Classify these papers", key="run_cora"):
         try:
-            idx = parse_indices(ss.cora_idx)
-            with st.spinner("Running the GCN… the first request loads the Cora dataset."):
-                ss.cora_result = api_post(api_url, "/predict/cora_node", {"node_indices": idx})
-        except Exception as exc:
-            ss.pop("cora_result", None)
-            st.error(str(exc))
+            indices = [int(x.strip()) for x in indices_raw.split(",") if x.strip() != ""]
+            if not indices:
+                raise ValueError("enter at least one node index")
+        except ValueError as exc:
+            st.error(f"Invalid node indices: {exc}")
+        else:
+            with st.spinner("Running inference over the Cora graph…"):
+                try:
+                    res = requests.post(
+                        f"{api_base}/predict/cora_node",
+                        json={"node_indices": indices},
+                        timeout=60,
+                    )
+                    res.raise_for_status()
+                    render_predictions(res.json())
+                except requests.exceptions.RequestException as exc:
+                    detail = ""
+                    try:
+                        detail = res.json().get("detail", "")  # type: ignore[possibly-undefined]
+                    except Exception:  # noqa: BLE001
+                        pass
+                    st.error(f"Request failed: {detail or exc}")
 
-    if "cora_result" in ss:
-        show_results(ss.cora_result, class_names, show_logits)
-
-# ----------------------------------------------------------------- tab 2
 with tab_custom:
-    st.subheader("Build a custom graph")
-    st.caption("Every paper has 1433 binary word features. Generate a random graph, then edit it by hand if you like.")
+    st.markdown(f"Submit your own node features (each a vector of **{FEATURE_DIM}** numbers) and optional edges.")
 
-    g1, g2, g3, g4 = st.columns([1, 2, 2, 2])
-    g1.number_input("Papers", min_value=1, max_value=MAX_CUSTOM_NODES, key="gen_n")
-    g2.slider("Feature density (%)", min_value=0.3, max_value=5.0, step=0.1, key="gen_density")
-    g3.selectbox("Citations", ["Random neighbours", "Ring", "None (self-loops only)"], key="gen_topo")
-    g4.radio("Feature format", [SPARSE, DENSE], key="feat_mode", horizontal=True)
-    st.button("Generate random graph", on_click=generate_graph, key="gen_btn")
+    gen_col1, gen_col2 = st.columns([1, 3])
+    with gen_col1:
+        gen_count = st.number_input("Random nodes", min_value=1, max_value=20, value=4, step=1)
+    with gen_col2:
+        st.write("")
+        st.write("")
+        generate = st.button("Generate random graph", key="gen_random")
 
-    t1, t2 = st.columns(2)
-    with t1:
-        hint = (
-            "One paper per line: the indices (0-1432) of the words that appear."
-            if ss.feat_mode == SPARSE
-            else "A JSON list with one vector of exactly 1433 numbers per paper."
-        )
-        st.text_area("Node features", key="nodes_text", height=240, help=hint)
-        st.caption(hint + " After switching format, click Generate again.")
-    with t2:
-        st.text_area("Citations (edges)", key="edges_text", height=240, help="One edge per line: source target")
-        st.checkbox("Treat edges as undirected", key="undirected")
-        st.caption("Leave empty to use self-loops only.")
+    if generate:
+        feats = [
+            [1 if random.random() > 0.94 else 0 for _ in range(FEATURE_DIM)]
+            for _ in range(gen_count)
+        ]
+        src, dst = [], []
+        for i in range(gen_count):
+            j = (i + 1) % gen_count
+            src += [i, j]
+            dst += [j, i]
+        st.session_state["custom_features"] = json.dumps(feats)
+        st.session_state["custom_edges"] = json.dumps([src, dst])
 
-    if st.button("Predict graph", type="primary", key="custom_go"):
+    features_raw = st.text_area(
+        "Node features (JSON array of arrays)",
+        value=st.session_state.get("custom_features", ""),
+        height=140,
+        key="custom_features",
+        placeholder='[[0, 0, 1, ...], [0, 1, 0, ...]]',
+    )
+    edges_raw = st.text_area(
+        "Edge indices — optional, shape [2, num_edges]",
+        value=st.session_state.get("custom_edges", ""),
+        height=90,
+        key="custom_edges",
+        placeholder="[[0, 1, 2], [1, 2, 0]]  (leave blank for self-loops only)",
+    )
+    st.caption("If edges are omitted, the API self-loops every node — no message passing between nodes.")
+
+    if st.button("Classify custom graph", key="run_custom"):
         try:
-            vectors = parse_nodes(ss.nodes_text, ss.feat_mode)
-            edges = parse_edges(ss.edges_text, len(vectors), ss.undirected)
-            with st.spinner("Running the GCN…"):
-                data = api_post(api_url, "/predict", {"node_features": vectors, "edge_indices": edges})
-            ss.custom_result = (data, vectors, edges)
-        except Exception as exc:
-            ss.pop("custom_result", None)
-            st.error(str(exc))
+            features = json.loads(features_raw)
+            if not isinstance(features, list) or not features:
+                raise ValueError("must be a non-empty array of arrays")
+            bad = [i for i, v in enumerate(features) if len(v) != FEATURE_DIM]
+            if bad:
+                raise ValueError(f"nodes at index {bad} do not have {FEATURE_DIM} features")
+        except (json.JSONDecodeError, ValueError) as exc:
+            st.error(f"Invalid node features: {exc}")
+        else:
+            payload = {"node_features": features}
+            if edges_raw.strip():
+                try:
+                    edges = json.loads(edges_raw)
+                    payload["edge_indices"] = edges
+                except json.JSONDecodeError as exc:
+                    st.error(f"Invalid edge indices JSON: {exc}")
+                    payload = None
 
-    if "custom_result" in ss:
-        data, vectors, edges = ss.custom_result
-        show_results(data, class_names, show_logits, vectors=vectors, edges=edges)
+            if payload:
+                with st.spinner("Running inference…"):
+                    try:
+                        res = requests.post(f"{api_base}/predict", json=payload, timeout=60)
+                        res.raise_for_status()
+                        render_predictions(res.json())
+                    except requests.exceptions.RequestException as exc:
+                        detail = ""
+                        try:
+                            detail = res.json().get("detail", "")  # type: ignore[possibly-undefined]
+                        except Exception:  # noqa: BLE001
+                            pass
+                        st.error(f"Request failed: {detail or exc}")
 
-# ----------------------------------------------------------------- tab 3
-with tab_info:
-    st.subheader(info.get("Model Name", "Model"))
-    i1, i2, i3, i4 = st.columns(4)
-    i1.metric("Feature dimension", info.get("feature_dimension"))
-    i2.metric("Classes", info.get("num_classes"))
-    i3.metric("ONNX inputs", len(info.get("inputs", [])))
-    i4.metric("ONNX outputs", len(info.get("outputs", [])))
-
-    st.markdown("##### Topic classes")
-    render_df(pd.DataFrame({"ID": list(class_names), "Topic": [pretty(v) for v in class_names.values()]}))
-
-    for key, label in (("inputs", "Inputs"), ("outputs", "Outputs")):
-        st.markdown(f"##### {label}")
-        rows = [{"Name": t["name"], "Shape": str(t["shape"]), "Type": t["type"]} for t in info.get(key, [])]
-        render_df(pd.DataFrame(rows))
+st.markdown("---")
+st.caption(f"Cora GCN Explorer · talks to `{api_base}` · 7-class topic model over {FEATURE_DIM}-dim bag-of-words features")
