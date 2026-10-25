@@ -4,7 +4,7 @@ An end-to-end deep learning project that leverages **Graph Convolutional Network
 
 ## 🚀 Live Demo
 
-⚠️ **Deployment Note:** The Render deployment may experience performance issues due to limited bandwidth and resources available on the free tier.
+⚠️ **Deployment Note:** The Render deployment experienced performance issues due to limited bandwidth and resources available on the free tier.
 
 ## 💻 Local Access
 
