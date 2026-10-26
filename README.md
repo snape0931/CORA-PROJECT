@@ -130,16 +130,6 @@ pip install -r requirements.txt
 python -m uvicorn main:app --reload
 ```
 
-### 5️⃣ Access the Application
-
-Once the server starts, open the following URLs in your browser:
-
-- 🌐 **Web Interface:** http://127.0.0.1:8000
-- 📖 **Interactive API Documentation:** http://127.0.0.1:8000/docs
-
-The web interface is served locally by the FastAPI application. Keep the terminal running while using the application.
-**Note:** Local execution does not require a public deployment. The application is accessible through the local URLs while the FastAPI server is running.
-
 ## 👩‍💻 Author
 
 **Saumya Srivastava**
